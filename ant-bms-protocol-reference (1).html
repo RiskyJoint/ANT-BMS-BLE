@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANT BMS Protocol Reference</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        
+        h3 {
+            color: #7f8c8d;
+        }
+        
+        .command-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .hex-code {
+            font-family: 'Courier New', monospace;
+            background-color: #2c3e50;
+            color: #1abc9c;
+            padding: 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px 0;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:hover {
+            background-color: #f1f8ff;
+        }
+        
+        .section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #856404;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #0c5460;
+        }
+        
+        .byte-breakdown {
+            display: grid;
+            grid-template-columns: auto auto auto auto;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .byte-item {
+            padding: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔋 ANT BMS Protocol Reference Guide</h1>
+    <p><strong>Protocol Version:</strong> ANT BMS (2024)<br>
+    <strong>Connection:</strong> Bluetooth Low Energy (BLE)<br>
+    <strong>Last Updated:</strong> December 2024</p>
+
+    <div class="info">
+        <strong>Note:</strong> This protocol was reverse-engineered from the ANT BMS Android app. 
+        All commands use handle <code>0x0010</code> for writes and <code>0x0011</code> for notifications.
+    </div>
+
+    <h2>📡 BLE Connection Details</h2>
+    <div class="section">
+        <h3>Service and Characteristic UUIDs</h3>
+        <table>
+            <tr>
+                <th>Type</th>
+                <th>UUID</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>Service</td>
+                <td><code>0000ff00-0000-1000-8000-00805f9b34fb</code></td>
+                <td>Main BMS Service</td>
+            </tr>
+            <tr>
+                <td>Write Characteristic</td>
+                <td><code>Handle: 0x0010</code></td>
+                <td>Send commands to BMS</td>
+            </tr>
+            <tr>
+                <td>Notify Characteristic</td>
+                <td><code>Handle: 0x0011</code></td>
+                <td>Receive data from BMS</td>
+            </tr>
+        </table>
+
+        <div class="warning">
+            <strong>Important:</strong> Unlike older ANT BMS versions, this protocol does NOT use the 
+            <code>5A5A5A00005A</code> / <code>DBDB00000000</code> handshake sequence.
+        </div>
+    </div>
+
+    <h2>📤 Command Structure</h2>
+    <div class="section">
+        <h3>General Command Format</h3>
+        <div class="hex-code">7E A1 [CMD] [DATA...] [CHECKSUM] [CHECKSUM] AA 55</div>
+        
+        <h3>Command Components</h3>
+        <table>
+            <tr>
+                <th>Bytes</th>
+                <th>Value</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>0-1</td>
+                <td><code>7E A1</code></td>
+                <td>Command header (fixed)</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><code>XX</code></td>
+                <td>Command type</td>
+            </tr>
+            <tr>
+                <td>3-N</td>
+                <td><code>...</code></td>
+                <td>Command data (varies)</td>
+            </tr>
+            <tr>
+                <td>N+1, N+2</td>
+                <td><code>XX XX</code></td>
+                <td>Checksum (2 bytes)</td>
+            </tr>
+            <tr>
+                <td>N+3, N+4</td>
+                <td><code>AA 55</code></td>
+                <td>End marker (fixed)</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>📊 Data Request Commands</h2>
+    <div class="section">
+        <h3>1. Get Cell Voltages & Status</h3>
+        <div class="command-box">
+            <strong>Command:</strong>
+            <div class="hex-code">7E A1 01 00 00 BE 18 55 AA 55</div>
+            <strong>Response:</strong> 9 notification packets containing:
+            <ul>
+                <li>Cell voltages (all cells)</li>
+                <li>Pack status information</li>
+                <li>Temperature data</li>
+            </ul>
+        </div>
+
+        <h3>2. Get BMS Model/Serial Number</h3>
+        <div class="command-box">
+            <strong>Command:</strong>
+            <div class="hex-code">7E A1 02 6C 02 20 58 C4 AA 55</div>
+            <strong>Response:</strong> 3 notification packets containing:
+            <ul>
+                <li>Model number (ASCII): e.g., "32BHA0TB120A"</li>
+                <li>Serial number (ASCII): e.g., "32BHUB00-220328A"</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>🔌 Relay Control Commands</h2>
+    <div class="section">
+        <table>
+            <tr>
+                <th>Action</th>
+                <th>Command</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>Discharge OFF</td>
+                <td><div class="hex-code">7E A1 51 01 00 00 D8 E5 AA 55</div></td>
+                <td>Turn off discharge MOSFET</td>
+            </tr>
+            <tr>
+                <td>Discharge ON</td>
+                <td><div class="hex-code">7E A1 51 03 00 00 79 25 AA 55</div></td>
+                <td>Turn on discharge MOSFET</td>
+            </tr>
+            <tr>
+                <td>Charge OFF</td>
+                <td><div class="hex-code">7E A1 51 04 00 00 C8 E4 AA 55</div></td>
+                <td>Turn off charge MOSFET</td>
+            </tr>
+            <tr>
+                <td>Charge ON</td>
+                <td><div class="hex-code">7E A1 51 06 00 00 69 24 AA 55</div></td>
+                <td>Turn on charge MOSFET</td>
+            </tr>
+        </table>
+
+        <h3>Control Command Pattern</h3>
+        <div class="hex-code">7E A1 51 [ACTION] 00 00 [CHECKSUM] [CHECKSUM] AA 55</div>
+        <p>Where ACTION byte is:</p>
+        <ul>
+            <li><code>01</code> = Discharge OFF</li>
+            <li><code>03</code> = Discharge ON</li>
+            <li><code>04</code> = Charge OFF</li>
+            <li><code>06</code> = Charge ON</li>
+        </ul>
+    </div>
+
+    <h2>📥 Response Data Structures</h2>
+    <div class="section">
+        <h3>Cell Voltage Data Format</h3>
+        <p>Cell voltages are sent as 16-bit big-endian values:</p>
+        <div class="hex-code">27 10 27 10 28 10 27 10 ...</div>
+        <table>
+            <tr>
+                <th>Hex Value</th>
+                <th>Decimal</th>
+                <th>Voltage</th>
+            </tr>
+            <tr>
+                <td><code>27 10</code></td>
+                <td>0x1027 = 4135</td>
+                <td>4.135V</td>
+            </tr>
+            <tr>
+                <td><code>28 10</code></td>
+                <td>0x1028 = 4136</td>
+                <td>4.136V</td>
+            </tr>
+        </table>
+        <p><strong>Formula:</strong> Voltage = Value ÷ 1000</p>
+
+        <h3>Main Status Packet Structure</h3>
+        <p>Example status packet:</p>
+        <div class="hex-code">64 00 64 00 01 01 00 00 80 1D 2C 04 C5 06 1B 04 61 D8 06 00</div>
+        
+        <div class="byte-breakdown">
+            <div class="byte-item"><strong>Bytes 0-1:</strong><br><code>64 00</code><br>SOC: 100%</div>
+            <div class="byte-item"><strong>Bytes 2-3:</strong><br><code>64 00</code><br>SOC: 100%</div>
+            <div class="byte-item"><strong>Bytes 4-5:</strong><br><code>01 01</code><br>MOS Status</div>
+            <div class="byte-item"><strong>Bytes 6-7:</strong><br><code>00 00</code><br>Reserved</div>
+            <div class="byte-item"><strong>Bytes 8-9:</strong><br><code>80 1D</code><br>Voltage</div>
+            <div class="byte-item"><strong>Bytes 10-11:</strong><br><code>2C 04</code><br>Current</div>
+            <div class="byte-item"><strong>Bytes 12-13:</strong><br><code>C5 06</code><br>Remaining Ah</div>
+            <div class="byte-item"><strong>Bytes 14-15:</strong><br><code>1B 04</code><br>Total Ah</div>
+        </div>
+
+        <h3>Status Data Decoding</h3>
+        <table>
+            <tr>
+                <th>Field</th>
+                <th>Bytes</th>
+                <th>Format</th>
+                <th>Formula</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>SOC %</td>
+                <td>0-1, 2-3</td>
+                <td>uint8</td>
+                <td>Direct value</td>
+                <td><code>64 00</code> = 100%</td>
+            </tr>
+            <tr>
+                <td>MOS Status</td>
+                <td>4-5</td>
+                <td>Flags</td>
+                <td>Byte 4: Charge, Byte 5: Discharge</td>
+                <td><code>01 01</code> = Both ON</td>
+            </tr>
+            <tr>
+                <td>Pack Voltage</td>
+                <td>8-9</td>
+                <td>uint16 BE</td>
+                <td>Value ÷ 100</td>
+                <td><code>80 1D</code> = 7552 ÷ 100 = 75.52V</td>
+            </tr>
+            <tr>
+                <td>Current</td>
+                <td>10-11</td>
+                <td>uint16 BE</td>
+                <td>Value ÷ 1000</td>
+                <td><code>2C 04</code> = 1068 ÷ 1000 = 1.068A</td>
+            </tr>
+            <tr>
+                <td>Remaining Ah</td>
+                <td>12-13</td>
+                <td>uint16 LE</td>
+                <td>Value ÷ 25.15</td>
+                <td><code>C5 06</code> = 1733 ÷ 25.15 = 68.88Ah</td>
+            </tr>
+            <tr>
+                <td>Total Ah</td>
+                <td>14-15</td>
+                <td>uint16 BE</td>
+                <td>Value ÷ 15.01</td>
+                <td><code>1B 04</code> = 1051 ÷ 15.01 = 70.0Ah</td>
+            </tr>
+        </table>
+
+        <h3>MOS Status Flags</h3>
+        <table>
+            <tr>
+                <th>Value</th>
+                <th>Charge MOS</th>
+                <th>Discharge MOS</th>
+            </tr>
+            <tr>
+                <td><code>00 00</code></td>
+                <td>OFF</td>
+                <td>OFF</td>
+            </tr>
+            <tr>
+                <td><code>01 00</code></td>
+                <td>ON</td>
+                <td>OFF</td>
+            </tr>
+            <tr>
+                <td><code>00 01</code></td>
+                <td>OFF</td>
+                <td>ON</td>
+            </tr>
+            <tr>
+                <td><code>01 01</code></td>
+                <td>ON</td>
+                <td>ON</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>🔧 Implementation Example</h2>
+    <div class="section">
+        <h3>Python Code Example</h3>
+        <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto;">
+<code>import struct
+from bleak import BleakClient
+
+class ANTBMSClient:
+    def __init__(self, mac_address):
+        self.mac = mac_address
+        self.write_handle = 0x0010
+        self.notify_handle = 0x0011
+        
+    async def get_status(self):
+        async with BleakClient(self.mac) as client:
+            # Send command
+            cmd = bytes.fromhex('7E A1 01 00 00 BE 18 55 AA 55')
+            await client.write_gatt_char(self.write_handle, cmd)
+            
+            # Parse responses...
+            
+    def parse_status_packet(self, data):
+        """Parse main status packet"""
+        status = {
+            'soc': data[0],
+            'mos_charge': bool(data[4]),
+            'mos_discharge': bool(data[5]),
+            'voltage': struct.unpack('>H', data[8:10])[0] / 100,
+            'current': struct.unpack('>H', data[10:12])[0] / 1000,
+            'remaining_ah': struct.unpack('<H', data[12:14])[0] / 25.15,
+            'total_ah': struct.unpack('>H', data[14:16])[0] / 15.01
+        }
+        return status
+</code></pre>
+    </div>
+
+    <h2>📝 Notes & Observations</h2>
+    <div class="section">
+        <ul>
+            <li>The BMS continuously sends data when connected - no polling needed for real-time updates</li>
+            <li>Cell voltage data and pack status are returned together in response to command <code>01</code></li>
+            <li>Checksum calculation method is still unknown - captured commands can be replayed</li>
+            <li>Temperature data appears in the cell voltage response packets (values like <code>21 00</code> = 33°C)</li>
+            <li>The protocol does not use the traditional ANT BMS handshake sequence</li>
+        </ul>
+    </div>
+
+    <h2>🚨 Safety Warnings</h2>
+    <div class="warning">
+        <strong>⚠️ IMPORTANT SAFETY INFORMATION:</strong>
+        <ul>
+            <li>Always verify relay states before making changes</li>
+            <li>Never turn off both relays while battery is under load</li>
+            <li>Incorrect commands could damage the BMS or battery</li>
+            <li>This information is for educational purposes only</li>
+            <li>Always use proper safety equipment when working with high voltage batteries</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666;">
+        <p>ANT BMS Protocol Reference - Reverse Engineered December 2024</p>
+        <p>Use at your own risk - Not affiliated with ANT BMS manufacturer</p>
+    </footer>
+</body>
+</html>
